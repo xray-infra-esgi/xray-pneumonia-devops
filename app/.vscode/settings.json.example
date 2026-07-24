@@ -1,0 +1,50 @@
+// Reference VS Code configuration for this project (opt-in).
+// To adopt it: copy this file to .vscode/settings.json (which stays
+// untracked, so your personal tweaks never create git noise).
+//
+// What it gives you:
+//  - the Python interpreter pointed at the training venv (.venv-ml)
+//  - sane Metals (Scala) inlay-hint defaults
+//  - watcher/search exclusions so VS Code never indexes the dataset,
+//    build outputs or Spark sinks (keeps the IDE fast and the RAM low)
+{
+  "python.defaultInterpreterPath": "${workspaceFolder}/.venv-ml/bin/python",
+  "python.analysis.typeCheckingMode": "basic",
+  "python.analysis.extraPaths": ["${workspaceFolder}/src"],
+  "python.analysis.indexing": true,
+  "python.analysis.useLibraryCodeForTypes": true,
+  "python.analysis.packageIndexDepths": [
+    {
+      "name": "pyspark",
+      "depth": 8,
+      "includeAllSymbols": true
+    }
+  ],
+  "python.analysis.diagnosticSeverityOverrides": {
+    "reportAttributeAccessIssue": "information"
+  },
+  "python.analysis.autoImportCompletions": false,
+  "metals.inlayHints.implicitArguments.enable": false,
+  "metals.inlayHints.inferredTypes.enable": false,
+  "files.watcherExclude": {
+    "**/target": true,
+    "**/.bloop": true,
+    "**/.metals": true,
+    "**/.bsp": true,
+    "**/.venv-ml/**": true,
+    "**/data/**": true,
+    "**/output/**": true,
+    "**/ml/artifacts/**": true
+  },
+  "search.exclude": {
+    "**/target": true,
+    "**/.bloop": true,
+    "**/.metals": true,
+    "**/.venv-ml": true,
+    "**/data": true,
+    "**/output": true,
+    "**/ml/artifacts": true,
+    "**/recovered-session/images": true
+  },
+  "editor.codeLens": true
+}

@@ -1,0 +1,18 @@
+# Runtime data and outputs: provided through volumes, never baked in.
+data/
+output/
+ml/artifacts/
+
+# Build and tooling artifacts (and the local learning sandbox).
+target/
+src/test/
+project/target/
+project/project/
+.bloop/
+.metals/
+.bsp/
+
+# Local environments and history.
+.venv-dashboard/
+.git/
+recovered-session/

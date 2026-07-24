@@ -1,0 +1,59 @@
+services:
+  consumer-infer:
+    build: .
+    image: xray
+    command: ["--service", "consume", "--mode", "infer", "--threads", "8"]
+    restart: unless-stopped
+    # Run as the host user so files written to the volumes stay owned by them
+    # (Hadoop needs a resolvable user name, hence HADOOP_USER_NAME).
+    user: "1000:1000"
+    environment:
+      JAVA_TOOL_OPTIONS: "-Xmx8g"
+      HADOOP_USER_NAME: xray
+    volumes:
+      - ./data:/app/data
+      - ./output:/app/output
+      - ./ml/artifacts:/app/ml/artifacts
+      - ./conf:/app/conf
+
+  dashboard:
+    build: ./app
+    ports:
+      - "8501:8501"
+    user: "1000:1000"
+    environment:
+      HOME: /tmp
+    volumes:
+      - ./data:/app/data
+      - ./output:/app/output
+    depends_on:
+      - consumer-infer
+
+  # On-demand tools (profile "tools"): never started by `up`, invoked with
+  # `docker compose run --rm <service> [args]` (args replace the default command).
+  producer:
+    build: .
+    image: xray
+    profiles: ["tools"]
+    user: "1000:1000"
+    environment:
+      HADOOP_USER_NAME: xray
+    command: ["--service", "produce", "--mode", "infer",
+              "--source", "data/chest_xray/test", "--limit", "100"]
+    volumes:
+      - ./data:/app/data
+      - ./conf:/app/conf
+
+  consumer-train:
+    build: .
+    image: xray
+    profiles: ["tools"]
+    user: "1000:1000"
+    command: ["--service", "consume", "--mode", "train"]
+    environment:
+      JAVA_TOOL_OPTIONS: "-Xmx8g"
+      HADOOP_USER_NAME: xray
+    volumes:
+      - ./data:/app/data
+      - ./output:/app/output
+      - ./conf:/app/conf

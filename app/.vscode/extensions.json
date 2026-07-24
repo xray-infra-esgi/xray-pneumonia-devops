@@ -1,0 +1,8 @@
+{
+  "recommendations": [
+    "scalameta.metals",
+    "scala-lang.scala",
+    "ms-python.python",
+    "ms-toolsai.jupyter"
+  ]
+}

@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+
+set -e
+
+cd "$(dirname "$0")"
+
+CLASSES_DIR="target/scala-2.13/classes"
+MAIN_CLASS_FILE="$CLASSES_DIR/com/xray/detection/Main.class"
+CLASSPATH_FILE=".runtime-classpath"
+MAIN_CLASS="com.xray.detection.Main"
+
+print_usage() {
+  echo "Usage:"
+  echo "  ./xray compile"
+  echo "  ./xray produce"
+  echo "  ./xray consume"
+}
+
+build_runtime() {
+  local raw_classpath_file
+  raw_classpath_file="$(mktemp)"
+
+  sbt --batch compile
+  sbt --batch 'show Runtime / fullClasspath' > "$raw_classpath_file"
+
+  grep 'Attributed(' "$raw_classpath_file" \
+    | sed -E 's/.*Attributed\((.*)\).*/\1/' \
+    | paste -sd: - > "$CLASSPATH_FILE"
+
+  rm -f "$raw_classpath_file"
+
+  if [ ! -s "$CLASSPATH_FILE" ]; then
+    echo "Failed to generate runtime classpath." >&2
+    exit 1
+  fi
+}
+
+build_if_needed() {
+  if [ ! -f "$MAIN_CLASS_FILE" ] || [ ! -f "$CLASSPATH_FILE" ]; then
+    echo "Preparing runtime..."
+    build_runtime
+  fi
+}
+
+run_main() {
+  local runtime_classpath
+
+  build_if_needed
+  runtime_classpath="$(cat "$CLASSPATH_FILE")"
+
+  if [ -z "$runtime_classpath" ]; then
+    echo "Runtime classpath is empty." >&2
+    return 1
+  fi
+
+  # The application's exit code propagates as-is: a non-zero exit means the
+  # app refused (bad config, missing model...), never a reason to re-run it.
+  # If the classpath goes stale after a dependency change: ./xray compile.
+  java -cp "$runtime_classpath" "$MAIN_CLASS" "$@"
+}
+
+if [ $# -eq 0 ]; then
+  print_usage
+  exit 1
+fi
+
+if [ "$1" = "compile" ]; then
+  build_runtime
+
+elif [ "$1" = "produce" ]; then
+  shift
+  run_main --service produce "$@"
+
+elif [ "$1" = "consume" ]; then
+  shift
+  run_main --service consume "$@"
+
+elif [ "$1" = "help" ]; then
+  print_usage
+
+else
+  echo "Unknown command: $1"
+  echo "Use: ./xray help"
+  exit 1
+fi
