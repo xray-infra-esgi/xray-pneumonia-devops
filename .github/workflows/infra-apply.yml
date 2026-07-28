@@ -1,0 +1,81 @@
+name: infra-apply
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'terraform/**'
+      - 'envs/**'
+      - '.github/workflows/infra-apply.yml'
+  # Manual trigger kept for demos and reruns.
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+# Never two applies at once: the state lock would make the second fail anyway.
+concurrency:
+  group: terraform-apply
+  cancel-in-progress: false
+
+env:
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  AWS_REGION: eu-west-3
+  TF_IN_AUTOMATION: 'true'
+
+jobs:
+  # Dev applies automatically on every merge: fast feedback, cheap env.
+  apply-dev:
+    runs-on: ubuntu-latest
+    environment: dev
+    defaults:
+      run:
+        working-directory: terraform
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.15.8
+
+      - name: Init
+        run: terraform init -input=false
+
+      - name: Select workspace
+        run: terraform workspace select -or-create dev
+
+      - name: Apply (dev)
+        run: terraform apply -input=false -auto-approve -var-file=../envs/dev.tfvars
+
+      - name: Outputs
+        run: terraform output
+
+  # Prod waits for a human: the `prod` environment carries a required
+  # reviewer (GitHub Settings > Environments), which pauses this job until
+  # someone clicks "Approve" — a real manual gate, not a sleep.
+  apply-prod:
+    needs: apply-dev
+    runs-on: ubuntu-latest
+    environment: prod
+    defaults:
+      run:
+        working-directory: terraform
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.15.8
+
+      - name: Init
+        run: terraform init -input=false
+
+      - name: Select workspace
+        run: terraform workspace select -or-create prod
+
+      - name: Apply (prod)
+        run: terraform apply -input=false -auto-approve -var-file=../envs/prod.tfvars
+
+      - name: Outputs
+        run: terraform output
