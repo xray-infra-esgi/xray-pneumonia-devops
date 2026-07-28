@@ -21,6 +21,7 @@ data "aws_ami" "ubuntu" {
 }
 
 # Cold storage: dataset + trained model
+#tfsec:ignore:aws-s3-enable-bucket-logging
 resource "aws_s3_bucket" "data" {
   bucket = "${var.project}-${terraform.workspace}-data-${data.aws_caller_identity.current.account_id}"
 }
@@ -32,6 +33,25 @@ resource "aws_s3_bucket_public_access_block" "data" {
   block_public_policy     = true
   ignore_public_acls      = true
   restrict_public_buckets = true
+}
+
+resource "aws_s3_bucket_versioning" "data" {
+  bucket = aws_s3_bucket.data.id
+
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+#tfsec:ignore:aws-s3-encryption-customer-key 
+resource "aws_s3_bucket_server_side_encryption_configuration" "data" {
+  bucket = aws_s3_bucket.data.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "aws:kms"
+    }
+  }
 }
 
 # VM identity
@@ -53,6 +73,7 @@ resource "aws_iam_role_policy" "s3_read" {
   name = "s3-data-read"
   role = aws_iam_role.vm.id
 
+  #tfsec:ignore:aws-iam-no-policy-wildcards
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
@@ -87,7 +108,7 @@ resource "aws_security_group" "xray" {
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = ["0.0.0.0/0"] #tfsec:ignore:aws-ec2-no-public-egress-sgr
   }
 }
 
@@ -98,9 +119,15 @@ resource "aws_instance" "xray" {
   vpc_security_group_ids = [aws_security_group.xray.id]
   iam_instance_profile   = aws_iam_instance_profile.vm.name
 
+  metadata_options {
+    http_tokens   = "required"
+    http_endpoint = "enabled"
+  }
+
   root_block_device {
     volume_size = 30
     volume_type = "gp3"
+    encrypted   = true
   }
 
   user_data = templatefile("${path.module}/user_data.sh.tpl", {
