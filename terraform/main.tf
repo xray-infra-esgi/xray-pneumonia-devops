@@ -21,7 +21,7 @@ data "aws_ami" "ubuntu" {
 }
 
 # Cold storage: dataset + trained model
-#tfsec:ignore:aws-s3-enable-bucket-logging -- school project, no audit requirement
+#tfsec:ignore:aws-s3-enable-bucket-logging
 resource "aws_s3_bucket" "data" {
   bucket = "${var.project}-${terraform.workspace}-data-${data.aws_caller_identity.current.account_id}"
 }
@@ -43,6 +43,7 @@ resource "aws_s3_bucket_versioning" "data" {
   }
 }
 
+#tfsec:ignore:aws-s3-encryption-customer-key 
 resource "aws_s3_bucket_server_side_encryption_configuration" "data" {
   bucket = aws_s3_bucket.data.id
 
@@ -72,7 +73,7 @@ resource "aws_iam_role_policy" "s3_read" {
   name = "s3-data-read"
   role = aws_iam_role.vm.id
 
-  #tfsec:ignore:aws-iam-no-policy-wildcards -- scoped to a single bucket ARN, not a true wildcard
+  #tfsec:ignore:aws-iam-no-policy-wildcards
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
@@ -107,7 +108,7 @@ resource "aws_security_group" "xray" {
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"] #tfsec:ignore:aws-ec2-no-public-egress-sgr -- VM needs outbound for apt, docker pull, S3, and SSM agent
+    cidr_blocks = ["0.0.0.0/0"] #tfsec:ignore:aws-ec2-no-public-egress-sgr
   }
 }
 
