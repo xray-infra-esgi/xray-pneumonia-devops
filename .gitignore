@@ -53,3 +53,6 @@ Thumbs.db
 .idea/
 *.log
 
+tmp
+ml/artifacts/models/*
+!ml/artifacts/models/saved_model/

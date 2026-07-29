@@ -22,6 +22,7 @@ ml/artifacts/*
 !ml/artifacts/models/
 ml/artifacts/models/*
 !ml/artifacts/models/.gitkeep
+!ml/artifacts/models/saved_model/
 !ml/artifacts/logs/
 ml/artifacts/logs/*
 !ml/artifacts/logs/.gitkeep

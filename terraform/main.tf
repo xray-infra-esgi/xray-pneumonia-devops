@@ -54,6 +54,17 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "data" {
   }
 }
 
+# The trained model is provisioned as code: Terraform seeds the bucket from
+# the repo, so a new environment needs no manual upload.
+resource "aws_s3_object" "model" {
+  for_each = fileset("${path.module}/../app/ml/artifacts/models/saved_model", "**")
+
+  bucket      = aws_s3_bucket.data.id
+  key         = "ml-artifacts/models/saved_model/${each.value}"
+  source      = "${path.module}/../app/ml/artifacts/models/saved_model/${each.value}"
+  source_hash = filemd5("${path.module}/../app/ml/artifacts/models/saved_model/${each.value}")
+}
+
 # VM identity
 resource "aws_iam_role" "vm" {
   name = "${var.project}-${terraform.workspace}-vm"
@@ -143,4 +154,7 @@ resource "aws_instance" "xray" {
   tags = {
     Name = "${var.project}-${terraform.workspace}"
   }
+
+  depends_on = [aws_s3_object.model]
+
 }
