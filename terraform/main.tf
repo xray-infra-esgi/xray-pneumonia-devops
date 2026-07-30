@@ -24,6 +24,10 @@ data "aws_ami" "ubuntu" {
 #tfsec:ignore:aws-s3-enable-bucket-logging
 resource "aws_s3_bucket" "data" {
   bucket = "${var.project}-${terraform.workspace}-data-${data.aws_caller_identity.current.account_id}"
+
+  tags = {
+    Name = "${var.project}-${terraform.workspace}-s3-bucket"
+  }
 }
 
 resource "aws_s3_bucket_public_access_block" "data" {
