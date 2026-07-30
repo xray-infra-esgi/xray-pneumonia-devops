@@ -25,7 +25,9 @@ data "aws_ami" "ubuntu" {
 resource "aws_s3_bucket" "data" {
   bucket = "${var.project}-${terraform.workspace}-data-${data.aws_caller_identity.current.account_id}"
 
-  tag = "${var.project}-{terraform.workspace}-s3-storage"
+  tags = {
+    Name = "${var.project}-${terraform.workspace}-s3-bucket"
+  }
 }
 
 resource "aws_s3_bucket_public_access_block" "data" {
